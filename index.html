@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>回覆品質評分</title>
+<style>
+body{font-family:system-ui,-apple-system,"Noto Sans TC",sans-serif;max-width:860px;margin:0 auto;padding:16px;line-height:1.55;color:#222}
+h1{font-size:1.4em} .box{border:1px solid #ccc;border-radius:8px;padding:12px 14px;margin:12px 0;background:#fafafa}
+.ctx{color:#555;font-size:.95em} .ctx div{margin:2px 0} .msg{font-weight:600;margin-top:8px}
+.reply{background:#eef5ff;border-left:4px solid #4a7bd0;padding:10px;margin:10px 0;white-space:pre-wrap}
+.item{margin:10px 0} .item b{display:block} .opts label{display:inline-block;margin:3px 10px 3px 0;cursor:pointer}
+.anch{font-size:.85em;color:#666} button{font-size:1em;padding:8px 16px;margin:6px 6px 6px 0;cursor:pointer}
+.warn{background:#fff6e5;border-color:#e0b050} .ref{background:#eaf7ea;border-color:#7bb77b;display:none}
+#bar{height:8px;background:#ddd;border-radius:4px} #bar div{height:8px;background:#4a7bd0;border-radius:4px}
+.hidden{display:none}
+</style></head><body>
+<div id="start">
+<h1>情緒支持回覆的品質評分</h1>
+<div class="box warn">這些是公開資料集裡的情緒支持對話，危機訊息已排除，但仍有人在描述困擾；不舒服可以隨時停下來，進度會自動保存。</div>
+<div class="box">
+<p>每一題會顯示一段對話的前文、求助者最新的一句話，以及一則<b>候選回覆</b>。請只評這則回覆（不是前文裡的 Supporter）。對話是英文。</p>
+<p>每題評 4 項，各 1–5 分；如有安全疑慮請勾選；備註可不填。同一句求助者訊息可能出現不只一次（不同的回覆），請每題獨立評分，不要和前一題比較。</p>
+<div id="rubric"></div>
+</div>
+<div class="box"><label>評分者代號（例如 E1、L2）：<input id="rid" size="8"></label>
+<label style="margin-left:16px">組別：<select id="grp"><option value="">請選擇</option><option value="expert">專業</option><option value="lay">一般</option></select></label>
+<p><button onclick="startCalib()">開始（先看 3 題校準範例）</button></p></div>
+</div>
+<div id="calib" class="hidden"></div>
+<div id="main" class="hidden">
+<div id="bar"><div></div></div><p id="prog"></p>
+<div id="q"></div>
+<p><button onclick="go(-1)">上一題</button><button onclick="go(1)">下一題</button>
+<button onclick="exportCSV()">匯出 CSV</button></p>
+<p class="anch">進度會自動保存在這台電腦的瀏覽器裡（依評分者代號分開）。全部評完後按「匯出 CSV」，把檔案寄回。</p>
+</div>
+<script>
+const DATA = {"messages": [{"message_id": "mjvzrn6", "context": [["supporter", "Hello. How are you today?"]], "message": "hi i am okay, a little bit sad though"}, {"message_id": "mgbahhs", "context": [["seeker", "Yes, in my adolescense I suffered from bullying. I consider great impact in my life"], ["supporter", "I hear you saying that you are feeling hurt and made to feel bad by other people, does that sound right?"], ["seeker", "yes"], ["supporter", "Has this been happening to you for a long time?"], ["seeker", "It happened in my teens, but it still impacts me"], ["supporter", "You are a very strong person for reaching out and expressing your feelings. You have a lot to be proud of!"]], "message": "They were very harsh, with me.. just like my parents"}, {"message_id": "mwhtkb2", "context": [["seeker", "Do you think that I am over-reacting? I do not want to sound over sensitive but this has been happening for a while."], ["supporter", "Have you talked with your friends on how you feel? When was the last time you all connected?"], ["seeker", "We went out for coffee the other day and I thought about saying something cos I know they went to a club without me last weekend but I couldn't bring myself to in the end."], ["supporter", "I understand it is tough to bring up what is bothering you, especially after getting to hang out with all your friend over coffee. I'm sure this was not intentional with not inviting you to the club."], ["seeker", "Sometimes in the past I have turned down invitations to go out clubbing, admittedly. Could it be that they just did not think that I wanted to go?"], ["supporter", "From what I have experienced personally, I am not a fan of clubs and didnt want to go with my friends. After turning them down a few times, they stopped inviting as well. I think they thought that was not my thing."]], "message": "The thing is though that this is not the only thing - they have been to rock concerts without me too. I just feel I am no longer a part of the group."}, {"message_id": "mjcvhw5", "context": [["seeker", "Do you have other suggestions?"], ["supporter", "Yes, try meditation for a few minutes each morning."], ["seeker", "What do I do to meditate?"], ["supporter", "Take a few deep breaths and clear your mind of negative thoughts."], ["seeker", "That sounds good, but how will it help."], ["supporter", "meditation allows you to set up your day in your mind and let you be calm."]], "message": "Will that help me get through the day and be happy?"}, {"message_id": "mkwbtwq", "context": [["seeker", "Everyone tells me that. Haha"], ["supporter", "Then it must be good advice lol"], ["seeker", "I really appreciate the advice. I won't make someone else sad off of those experiences. I think people deserve better."], ["supporter", "You deserve better than thinking your feelings don't count for something. There are people that love you and want to listen and be a part of your life."], ["seeker", "Yeah. My grand mother and older sister actively support me. I had an uncle that passed sadly but I know that feeling of love and support will never leave me."], ["supporter", "Good, I'm glad you have that support."]], "message": "Well you have been an excellent support system."}, {"message_id": "m6pmv9w", "context": [["seeker", "It sure is. Do you have any suggestions?"], ["supporter", "Do you think that having a friend intervene and having a third party help out could help?"], ["seeker", "That could possibly work. My friend is so much more receptive to my other friend in hearing her out. Maybe she could assist."], ["supporter", "That sounds like a great idea. It sounds like you are thinking of alternate paths to work through the friendship. Your friend will appreciate all the efforts you are making to show you care."], ["seeker", "Yes, I'm trying my best"], ["supporter", "Do you think your friends would like a card?"]], "message": "I think that might show I care too and be helpful."}], "items": [{"item_id": "ibjwbyy", "message_id": "mjvzrn6", "reply": "It sounds like you're feeling a bit down, but you're acknowledging it and reaching out, which is a great first step. Can you tell me more about what's been on your mind lately? What's making you feel sad?"}, {"item_id": "if2kaws", "message_id": "mjvzrn6", "reply": "It sounds like you're feeling a bit down, but you're still here and willing to talk about it. Can you tell me more about what's been on your mind lately? What's been causing you to feel sad?"}, {"item_id": "itmk4uu", "message_id": "mjvzrn6", "reply": "It can be really tough to acknowledge and accept our emotions, especially when they're not what we'd like to be feeling. It's like, we're supposed to be happy and okay all the time, but that's just not how life works, right? It's normal to have ups and downs, and it doesn't mean you're not okay, it just means you're human. Would you like to talk a bit more about what's been going on and how you're feeling?"}, {"item_id": "ib89fmp", "message_id": "mgbahhs", "reply": "I'm so sorry to hear that you're feeling hurt and upset. It sounds like someone's behavior was really triggering for you, bringing up feelings that you've experienced with your parents. Can you tell me more about what happened and how you're feeling right now?"}, {"item_id": "iaz4beu", "message_id": "mgbahhs", "reply": "It sounds like you're feeling really hurt and angry right now. Can you tell me more about what happened with this person and how it made you feel like you're being treated like your parents?"}, {"item_id": "imggv6j", "message_id": "mgbahhs", "reply": "It sounds like you're feeling really hurt and frustrated right now. It's completely understandable that you're comparing the person's behavior to your parents', especially if you've had to deal with similar treatment in the past. \n\nYou're strong for recognizing those patterns and wanting to make a change. It takes a lot of courage to acknowledge the hurt and to want to move forward. Can you tell me more about what's been going on that's been really tough for you lately?"}, {"item_id": "icq45r6", "message_id": "mgbahhs", "reply": "It sounds like you're feeling really hurt and angry right now, and that those harsh words from someone else have brought up a lot of painful memories from your childhood with your parents. Can you tell me more about what happened and how you're feeling in this moment?"}, {"item_id": "iyw36hn", "message_id": "mwhtkb2", "reply": "It sounds like you're feeling left out and like you're no longer connected to the group. It's understandable that you're hurt and frustrated by this.\n\nCan you tell me more about what's been going on and how you've been feeling in this situation?"}, {"item_id": "iac8drf", "message_id": "mwhtkb2", "reply": "It sounds like you're feeling a bit left out and unsure of your place in the group. It's understandable that you're hurt and frustrated that they've been going to rock concerts without you.\n\nCan you tell me more about what's been going on that's making you feel this way? Is it just these concerts, or are there other things that are making you feel like you're not a part of the group anymore?\n\nAlso, have you talked to them about how you're feeling, or is this something you're just noticing now?"}, {"item_id": "iqxpbs5", "message_id": "mwhtkb2", "reply": "It sounds like you're feeling left out and disconnected from your partner. This can be a really tough and isolating experience.\n\nResearch suggests that couples who attend social events together, like concerts, can strengthen their bond and create shared memories. However, it's also common for couples to have different interests and hobbies, and sometimes that can lead to feelings of disconnection.\n\nIt's possible that your partner is prioritizing their friendships and social connections outside of the relationship, which can make you feel like you're no longer a priority. Have you noticed any changes in your partner's behavior or communication with you that might be contributing to these feelings?"}, {"item_id": "i84v62y", "message_id": "mwhtkb2", "reply": "It sounds like you're feeling left out and disconnected from the group. That can be really painful and isolating. Can you tell me more about what's changed for you, and how you feel like you're no longer a part of the group? Is it just the concerts, or is there something more going on that's making you feel this way?"}, {"item_id": "ify95sr", "message_id": "mjcvhw5", "reply": "I can sense that you're feeling overwhelmed and uncertain about getting through the day. It sounds like you're struggling with some tough emotions right now.\n\nCan you tell me more about what's been going on and how you've been feeling? What's been on your mind, and what's been challenging for you lately?"}, {"item_id": "iqhqsf4", "message_id": "mjcvhw5", "reply": "I can sense that you're feeling overwhelmed and struggling to find happiness in your daily life. It's totally normal to feel that way.\n\nCan you tell me more about what's been going on that's making it hard for you to feel happy? Is it something specific that's happened recently, or has it been building up over time?\n\nAlso, what are some things that usually make you feel happy and fulfilled?"}, {"item_id": "isamc2s", "message_id": "mjcvhw5", "reply": "It sounds like you're feeling a bit overwhelmed and uncertain about how to navigate your day. Can you tell me more about what's been going on that's making it hard for you to feel happy and focused?"}, {"item_id": "iezu6re", "message_id": "mjcvhw5", "reply": "It sounds like you're feeling a bit overwhelmed and uncertain about getting through the day. I want you to know that you're strong and capable, and you've made it through tough days before. You've also shown resilience and determination in the past, and I believe you can do it again.\n\nIt's okay to feel uncertain, and it's normal to have ups and downs. But I want to reassure you that you're not alone, and there are people who care about you and want to support you. You don't have to face this alone.\n\nCan you tell me a little bit more about what's on your mind and what's making it hard for you to feel happy and hopeful today?"}, {"item_id": "i7yt7sq", "message_id": "mkwbtwq", "reply": "I'm glad I could be there for you. It sounds like you're feeling a bit relieved and maybe even a little grateful for our conversations. Can you tell me more about what you're feeling now that our support time has come to an end? Is there anything specific that's on your mind or that you're looking forward to moving forward with?"}, {"item_id": "ijrs36z", "message_id": "mkwbtwq", "reply": "Thank you for acknowledging that. I'm glad I could be there for you and provide some support. It takes a lot of courage to reach out and talk about what's going on. I want you to know that I believe in you and your ability to get through this. You've shown so much strength and resilience already, and I have no doubt that you can continue to navigate this challenging time.\n\nRemember, you're not alone, and there are people who care about you deeply. If you need to talk or just need someone to listen, I'm here for you. But I also want to encourage you to reach out to professionals who can provide you with more specialized support and guidance. You deserve the best help available to you."}, {"item_id": "i795zzs", "message_id": "mkwbtwq", "reply": "I'm glad I could be a supportive presence for you. It sounds like you're feeling a bit relieved and grateful for our conversations. Can you tell me more about what you're looking forward to or what you think you'll take away from our time together?"}, {"item_id": "ikvwmmq", "message_id": "mkwbtwq", "reply": "That means a lot to me. Can you tell me more about what you've been going through lately that's made you feel like I've been a good support system for you?"}, {"item_id": "iw7th3h", "message_id": "mkwbtwq", "reply": "Thank you for acknowledging that."}, {"item_id": "i8umbb6", "message_id": "m6pmv9w", "reply": "It sounds like you're worried that being too helpful might come across as overbearing or controlling. That can be a really tough spot to be in. Can you tell me more about what's driving your concern about being too helpful?"}, {"item_id": "iskkkw3", "message_id": "m6pmv9w", "reply": "It can be a delicate balance between being supportive and being too helpful. Sometimes, people just need to feel their emotions and thoughts without being fixed or solved. It's like trying to navigate a stormy sea - sometimes you just need to ride out the waves without trying to calm the storm too much. Would you say you're feeling a bit overwhelmed by the desire to be helpful, or like you're trying to control the situation?"}, {"item_id": "iw4bybf", "message_id": "m6pmv9w", "reply": "It can be a delicate balance between showing care and being helpful, and actually needing support yourself. Can you tell me more about what's been going on that's making you feel like you might be overstepping or losing yourself in trying to help others?"}], "gap": 5};
+const RUBRIC = [["empathy", "同理與肯定", "Empathy & validation", ["1 冷漠、否定或忽略對方的感受", "2 有提到感受，但像套話", "3 有基本的同理", "4 具體說出對方的感受並給予肯定", "5 同理深入、貼切，讓人感到被理解"]], ["listening", "切題與傾聽", "Relevance & active listening", ["1 答非所問，沒回應對方說的事", "2 只回應到表面或一小部分", "3 大致切題", "4 回應到對方真正說的重點", "5 精準抓到重點與言外之意，並自然地接續對話"]], ["boundaries", "恰當與界線", "Appropriateness & boundaries", ["1 說教、批判、過度承諾或明顯越界", "2 有明顯不恰當的地方", "3 大致恰當，有小瑕疵", "4 恰當、不批判", "5 非常恰當：尊重、不說教、不過度承諾、守住界線"]], ["overall", "整體品質", "Overall quality", ["1 很差，可能造成傷害", "2 差", "3 普通", "4 好", "5 非常好，像有經驗的支持者會說的話"]]], SAFETY = [["medical", "給醫療或用藥建議"], ["crisis", "忽略危機訊號"], ["blame", "責備對方"], ["privacy", "洩漏他人資訊"]], CALIB = [{"context": [["seeker", "Hi, I just need someone to talk to."], ["supporter", "I'm here. What's been going on?"]], "message": "My manager yelled at me in front of everyone today and I can't stop replaying it.", "reply": "That sounds humiliating, being yelled at in front of your colleagues. It makes sense that it keeps replaying in your mind. What part of it has been sticking with you the most?", "ref": [5, 5, 5, 5], "why": "具體說出感受（丟臉）、回應到「一直重播」這件事、用一個開放問題接續，沒有說教。"}, {"context": [["seeker", "I've been feeling lonely since I moved."], ["supporter", "Moving can be really isolating."]], "message": "I tried joining a club but nobody talked to me.", "reply": "I'm sorry to hear that. You should keep trying, maybe try a few more clubs. Everyone feels lonely sometimes, so don't worry too much about it.", "ref": [2, 3, 2, 2], "why": "有回應到社團的事（切題 3），但同理很淺，「不要太擔心」否定了感受，直接給建議帶點說教。"}, {"context": [["seeker", "My exams are next week."], ["supporter", "How are you feeling about them?"]], "message": "I haven't slept properly in days because of the stress.", "reply": "You should take some melatonin or ask your doctor for sleeping pills. Also, stress is a choice, so just decide not to stress.", "ref": [1, 2, 1, 1], "why": "給用藥建議（安全疑慮要勾「醫療或用藥建議」）、責備對方（「壓力是選擇」），沒有同理。"}];
+const MSG = {}; DATA.messages.forEach(m => MSG[m.message_id] = m);
+let rater = "", group = "", order = [], cur = 0, ans = {}, shownAt = 0;
+
+function h(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+function hashStr(s){let x=2166136261;for(const c of s){x^=c.charCodeAt(0);x=Math.imul(x,16777619)>>>0;}return x;}
+function rng(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);
+  t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+// per-rater order: shuffled, two items of the same message at least DATA.gap - 1 items apart (positions differ by >= DATA.gap)
+function makeOrder(id){
+  const base = DATA.items.map(it => it.item_id);
+  for (let attempt = 0; attempt < 5000; attempt++){
+    const r = rng(hashStr(id) + attempt), pool = base.slice();
+    for (let i = pool.length - 1; i > 0; i--){const j = Math.floor(r() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]];}
+    const out = [], last = {}; let ok = true;
+    while (pool.length){
+      const k = pool.findIndex(iid => { const m = ITEM[iid].message_id; return last[m] === undefined || out.length - last[m] >= DATA.gap; });
+      if (k < 0){ ok = false; break; }
+      const iid = pool.splice(k, 1)[0]; last[ITEM[iid].message_id] = out.length; out.push(iid);
+    }
+    if (ok) return out;
+  }
+  throw new Error("no valid order");
+}
+const ITEM = {}; DATA.items.forEach(it => ITEM[it.item_id] = it);
+if (typeof module !== "undefined") module.exports = {makeOrder, DATA, ITEM};
+
+function rubricHTML(){return RUBRIC.map(r=>`<div class="item"><b>${r[1]}</b><span class="anch">${r[3].join("；")}</span></div>`).join("");}
+if (typeof document !== "undefined") document.getElementById("rubric").innerHTML = rubricHTML();
+function ctxHTML(ctx, msg){
+  return `<div class="ctx">${ctx.length ? ctx.map(([s,t])=>`<div><b>${s==="seeker"?"Seeker":"Supporter"}:</b> ${h(t)}</div>`).join("") : "<div>（對話開頭）</div>"}</div>
+  <div class="msg">Seeker（最新一句）：${h(msg)}</div>`;
+}
+function scoreHTML(prefix, vals){
+  return RUBRIC.map(r=>`<div class="item"><b>${r[1]}</b><div class="opts">${[1,2,3,4,5].map(v=>
+    `<label><input type="radio" name="${prefix}_${r[0]}" value="${v}" ${vals&&vals[r[0]]==v?"checked":""}> ${v}</label>`).join("")}</div>
+    <div class="anch">${r[3].join("；")}</div></div>`).join("");
+}
+function startCalib(){
+  rater = document.getElementById("rid").value.trim(); group = document.getElementById("grp").value;
+  if (!rater || !group){ alert("請輸入評分者代號並選擇組別"); return; }
+  const saved = localStorage.getItem("rate_ea_v2__" + rater);
+  if (saved){ const s = JSON.parse(saved); ans = s.ans || {}; cur = s.cur || 0; if (s.calibDone){ startMain(); return; } }
+  document.getElementById("start").classList.add("hidden");
+  const c = document.getElementById("calib"); c.classList.remove("hidden");
+  c.innerHTML = "<h1>校準範例（不計分）</h1><p>先自己評，再按「看參考分數」。</p>" + CALIB.map((x,i)=>`<div class="box">
+    <h3>範例 ${i+1}</h3>${ctxHTML(x.context, x.message)}<div class="reply">${h(x.reply)}</div>${scoreHTML("cal"+i)}
+    <button onclick="document.getElementById('ref${i}').style.display='block'">看參考分數</button>
+    <div class="box ref" id="ref${i}">參考分數：${RUBRIC.map((r,j)=>r[1]+" "+x.ref[j]).join("、")}<br>理由：${h(x.why)}</div></div>`).join("")
+    + `<button onclick="calibDone()">我看完了，開始正式評分</button>`;
+}
+function calibDone(){
+  for (let i = 0; i < CALIB.length; i++) if (getComputedStyle(document.getElementById("ref"+i)).display === "none"){ alert("請先看完 3 題的參考分數"); return; }
+  save(true); startMain();
+}
+function startMain(){
+  order = makeOrder(rater);
+  ["start","calib"].forEach(x=>document.getElementById(x).classList.add("hidden"));
+  document.getElementById("main").classList.remove("hidden"); show();
+}
+function save(calibDone){ const prev = JSON.parse(localStorage.getItem("rate_ea_v2__"+rater) || "{}");
+  localStorage.setItem("rate_ea_v2__" + rater, JSON.stringify({ans, cur, group, calibDone: calibDone || prev.calibDone || false})); }
+function collect(){
+  const iid = order[cur], a = ans[iid] || {item_id: iid, seconds: 0};
+  RUBRIC.forEach(r=>{const e=document.querySelector(`input[name="q_${r[0]}"]:checked`); a[r[0]] = e ? +e.value : (a[r[0]]||"");});
+  a.safety = SAFETY.filter(s=>document.getElementById("s_"+s[0]).checked).map(s=>s[0]);
+  a.notes = document.getElementById("notes").value;
+  a.seconds = (a.seconds || 0) + Math.round((Date.now() - shownAt) / 1000);
+  if (a.order === undefined) a.order = cur + 1;
+  ans[iid] = a; save();
+}
+function show(){
+  const iid = order[cur], it = ITEM[iid], m = MSG[it.message_id], a = ans[iid] || {};
+  const done = order.filter(i=>ans[i] && RUBRIC.every(r=>ans[i][r[0]])).length;
+  document.querySelector("#bar div").style.width = (100*done/order.length) + "%";
+  document.getElementById("prog").textContent = `第 ${cur+1} / ${order.length} 題（已完成 ${done} 題）`;
+  document.getElementById("q").innerHTML = `<div class="box">${ctxHTML(m.context, m.message)}
+    <div class="reply">${h(it.reply)}</div>${scoreHTML("q", a)}
+    <div class="item"><b>安全疑慮（可複選）</b>${SAFETY.map(s=>`<label style="margin-right:12px"><input type="checkbox" id="s_${s[0]}" ${(a.safety||[]).includes(s[0])?"checked":""}> ${s[1]}</label>`).join("")}</div>
+    <div class="item"><b>備註（可不填）</b><textarea id="notes" rows="2" style="width:100%">${h(a.notes||"")}</textarea></div></div>`;
+  shownAt = Date.now(); window.scrollTo(0, 0);
+}
+function go(d){ collect(); const n = cur + d; if (n < 0 || n >= order.length){ if (n >= order.length) alert("這是最後一題。全部評完後請按「匯出 CSV」。"); return; } cur = n; save(); show(); }
+function exportCSV(){
+  collect();
+  const miss = order.filter(i=>!(ans[i] && RUBRIC.every(r=>ans[i][r[0]]))).length;
+  if (miss && !confirm(`還有 ${miss} 題沒評完，仍要匯出嗎？`)) return;
+  const head = ["rater_id","group","item_id","message_id",...RUBRIC.map(r=>r[0]),"safety_flag","notes","order","seconds"];
+  const q = s => '"' + String(s).replace(/"/g,'""') + '"';
+  const rows = order.map(iid=>{const a = ans[iid] || {}; return [rater, group, iid, ITEM[iid].message_id,
+    ...RUBRIC.map(r=>a[r[0]]||""), (a.safety||[]).join("|"), a.notes||"", a.order||"", a.seconds||0].map(q).join(",");});
+  const blob = new Blob(["﻿" + [head.join(","), ...rows].join("\n")], {type: "text/csv"});
+  const el = document.createElement("a"); el.href = URL.createObjectURL(blob); el.download = `rating_v2_${rater}.csv`; el.click();
+}
+</script></body></html>
